@@ -1,0 +1,36 @@
+version: '3'
+
+volumes:
+  redis:
+
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management
+    command: rabbitmq-server
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=123456Aa
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+  _common: &common
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile-dev
+    volumes:
+      - .:/code
+    environment:
+      BROKER_URL: amqp://admin:123456Aa@rabbitmq:5672/myvhost
+    depends_on:
+      - rabbitmq
+
+  django:
+    <<: *common
+    command: ./manage.py runserver 0.0.0.0:8080
+    ports:
+      - 8080:8080
+
+  celery:
+    <<: *common
+    command: ["/bin/sh","-c","/code/run_celery.sh"]
